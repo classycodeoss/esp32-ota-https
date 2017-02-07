@@ -28,9 +28,9 @@
 #include "driver/gpio.h"
 
 #include "main.h"
-#include "wifi_sta.h"           // WIFI module configuration, connecting to an access point.
-#include "wifi_tls.h"           // TLS server connections and request handling.
-#include "fwupdater_wifi_tls.h" // Coordinating firmware updates
+#include "wifi_sta.h"   // WIFI module configuration, connecting to an access point.
+#include "wifi_tls.h"   // TLS server connections and request handling.
+#include "iap_https.h"  // Coordinating firmware updates
 
 
 #define TAG "main"
@@ -41,8 +41,8 @@ static const char *peer_public_key_pem = OTA_PEER_PEM;
 
 static wifi_sta_init_struct_t wifi_params;
 
-// Static because the scope of this object is the usage of the fwupdater module.
-static fwupdater_wifi_tls_config_t fwupdater_config;
+// Static because the scope of this object is the usage of the iap_https module.
+static iap_https_config_t ota_config;
 
 
 static void init_wifi();
@@ -80,7 +80,7 @@ void app_main()
         if (wifi_sta_is_connected()) {
             nofFlashes += 1;
         }
-        if (fwupdater_wifi_tls_update_in_progress()) {
+        if (iap_https_update_in_progress()) {
             nofFlashes += 2; // results in 3 (not connected) or 4 (connected) flashes
         }
         
@@ -116,19 +116,19 @@ static void init_ota()
 {
     ESP_LOGI(TAG, "Initialising OTA firmware updating.");
     
-    fwupdater_config.server_host_name = OTA_SERVER_HOST_NAME;
-    fwupdater_config.server_port = "443";
-    strncpy(fwupdater_config.server_metadata_path, OTA_SERVER_METADATA_PATH, sizeof(fwupdater_config.server_metadata_path) / sizeof(char));
-    bzero(fwupdater_config.server_firmware_path, sizeof(fwupdater_config.server_firmware_path) / sizeof(char));
-    fwupdater_config.server_root_ca_public_key_pem = server_root_ca_public_key_pem;
-    fwupdater_config.peer_public_key_pem = peer_public_key_pem;
-    fwupdater_config.polling_interval_s = OTA_POLLING_INTERVAL_S;
-    fwupdater_config.auto_reboot = OTA_AUTO_REBOOT;
+    ota_config.server_host_name = OTA_SERVER_HOST_NAME;
+    ota_config.server_port = "443";
+    strncpy(ota_config.server_metadata_path, OTA_SERVER_METADATA_PATH, sizeof(ota_config.server_metadata_path) / sizeof(char));
+    bzero(ota_config.server_firmware_path, sizeof(ota_config.server_firmware_path) / sizeof(char));
+    ota_config.server_root_ca_public_key_pem = server_root_ca_public_key_pem;
+    ota_config.peer_public_key_pem = peer_public_key_pem;
+    ota_config.polling_interval_s = OTA_POLLING_INTERVAL_S;
+    ota_config.auto_reboot = OTA_AUTO_REBOOT;
     
-    fwupdater_wifi_tls_init(&fwupdater_config);
+    iap_https_init(&ota_config);
     
     // Immediately check if there's a new firmware image available.
-    fwupdater_wifi_tls_check_now();
+    iap_https_check_now();
 }
 
 static esp_err_t app_event_handler(void *ctx, system_event_t *event)

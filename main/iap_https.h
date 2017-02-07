@@ -1,5 +1,5 @@
 //
-//  fwupdater_wifi_tls.h
+//  iap_https.h
 //  esp32-ota-https
 //
 //  Updating the firmware over the air.
@@ -20,11 +20,11 @@
 // limitations under the License.
 //
 
-#ifndef __FWUPDATER_WIFI_TLS__
-#define __FWUPDATER_WIFI_TLS__ 1
+#ifndef __IAP_HTTPS__
+#define __IAP_HTTPS__ 1
 
 
-typedef struct fwupdater_wifi_tls_config_ {
+typedef struct iap_https_config_ {
   
     // Name of the host that provides the firmware images, e.g. "www.classycode.io".
     const char *server_host_name;
@@ -47,9 +47,9 @@ typedef struct fwupdater_wifi_tls_config_ {
     // Path to the firmware image file.
     char server_firmware_path[256];
   
-    // Time between two checks, in seconds.
+    // Default time between two checks, in seconds.
     // If you want to trigger the check manually, set the value to 0 and call the
-    // fwupdater_wifi_tls_check_now function.
+    // iap_https_check_now function.
     // During development, this is typically a small value, e.g. 10 seconds.
     // In production, especially with many devices, higher values make more sense
     // to keep the network traffic low (e.g. 3600 for 1 hour).
@@ -60,18 +60,22 @@ typedef struct fwupdater_wifi_tls_config_ {
     // and manually trigger the reboot.
     int auto_reboot;
 
-} fwupdater_wifi_tls_config_t;
+} iap_https_config_t;
 
 
-int fwupdater_wifi_tls_init(fwupdater_wifi_tls_config_t *config);
+// Module initialisation, call once at application startup.
+int iap_https_init(iap_https_config_t *config);
 
 // Manually trigger a firmware update check.
 // Queries the server for a firmware update and, if one is available, installs it.
 // If automatic checks are enabled, calling this function causes the timer to be re-set.
-int fwupdater_wifi_tls_check_now();
+int iap_https_check_now();
 
-int fwupdater_wifi_tls_update_in_progress();
+// Returns 1 if an update is in progress, 0 otherwise.
+int iap_https_update_in_progress();
 
-int fwupdater_wifi_tls_new_firmware_installed();
+// Returns 1 if a new firmware has been installed but not yet booted.
+int iap_https_new_firmware_installed();
 
-#endif // __FWUPDATER_WIFI_TLS__
+
+#endif // __IAP_HTTPS__
