@@ -4,6 +4,8 @@
 //
 //  Updating the firmware over the air.
 //
+//  This module is responsible to trigger and coordinate firmware updates.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
@@ -25,6 +27,9 @@
 
 
 typedef struct iap_https_config_ {
+  
+    // Version number of the running firmware image.
+    int current_software_version;
   
     // Name of the host that provides the firmware images, e.g. "www.classycode.io".
     const char *server_host_name;
@@ -71,10 +76,10 @@ int iap_https_init(iap_https_config_t *config);
 // If automatic checks are enabled, calling this function causes the timer to be re-set.
 int iap_https_check_now();
 
-// Returns 1 if an update is in progress, 0 otherwise.
+// Returns 1 if an update is currently in progress, 0 otherwise.
 int iap_https_update_in_progress();
 
-// Returns 1 if a new firmware has been installed but not yet booted.
+// Returns 1 if a new firmware has been installed but not yet booted, 0 otherwise.
 int iap_https_new_firmware_installed();
 
 

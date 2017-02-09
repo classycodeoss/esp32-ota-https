@@ -4,6 +4,9 @@
 //
 //  Updating the firmware over the air.
 //
+//  This module provides TLS connections with certificate pinning and
+//  callback-based request/response functionality.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
@@ -38,6 +41,7 @@
 #define TAG "wifi_tls"
 
 
+// Internal state for a single TLS context (single connection).
 typedef struct wifi_tls_context_ {
     
     // We transparently clean up the context in case of errors.

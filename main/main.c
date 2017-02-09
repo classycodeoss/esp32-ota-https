@@ -29,7 +29,6 @@
 
 #include "main.h"
 #include "wifi_sta.h"   // WIFI module configuration, connecting to an access point.
-#include "wifi_tls.h"   // TLS server connections and request handling.
 #include "iap_https.h"  // Coordinating firmware updates
 
 
@@ -52,11 +51,9 @@ static esp_err_t app_event_handler(void *ctx, system_event_t *event);
 
 void app_main()
 {
-    ESP_LOGI(TAG, "Intialisation started.");
-    ESP_LOGI(TAG, "Software version: %u", SOFTWARE_VERSION);
+    ESP_LOGI(TAG, "---------- Intialization started ----------");
+    ESP_LOGI(TAG, "---------- Software version: %2d -----------", SOFTWARE_VERSION);
 
-
-    // Key-value storage
     
     nvs_flash_init();
     
@@ -68,13 +65,25 @@ void app_main()
     esp_event_loop_init(&app_event_handler, NULL);
 
 
+    // Configure the WIFI module. This module maintains the connection to the
+    // defined access point.
+
     init_wifi();
+    
+    
+    // Configure the over-the-air update module. This module periodically checks
+    // for firmware updates by polling a web server. If an update is available,
+    // the module downloads and installs it.
+    
     init_ota();
+
+
+    // This application doesn't actually do anything useful.
+    // It just lets an LED blink. You may need to adapt this for your own module
+    // (GPIO5 is the blue LED on the "ESP32 Thing" module.)
 
     gpio_set_direction(GPIO_NUM_5, GPIO_MODE_OUTPUT);
     while (1) {
-        
-        // ... Do something useful instead ...
         
         int nofFlashes = 1;
         if (wifi_sta_is_connected()) {
@@ -91,10 +100,15 @@ void app_main()
             vTaskDelay(150 / portTICK_PERIOD_MS);
         }
         
-        // Now is a good time to re-boot, if a new firmware image has been loaded.
-        /*
-         ota2_boot_new_firmware();
-         */
+        // If the application could only re-boot at certain points, you could
+        // manually query iap_https_new_firmware_installed and manually trigger
+        // the re-boot. What we do in this example is to let the firmware updater
+        // re-boot automatically after installing the update (see init_ota below).
+        //
+        // if (iap_https_new_firmware_installed()) {
+        //     ESP_LOGI(TAG, "New firmware has been installed - rebooting...");
+        //     esp_restart();
+        // }
         
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
@@ -116,6 +130,7 @@ static void init_ota()
 {
     ESP_LOGI(TAG, "Initialising OTA firmware updating.");
     
+    ota_config.current_software_version = SOFTWARE_VERSION;
     ota_config.server_host_name = OTA_SERVER_HOST_NAME;
     ota_config.server_port = "443";
     strncpy(ota_config.server_metadata_path, OTA_SERVER_METADATA_PATH, sizeof(ota_config.server_metadata_path) / sizeof(char));
@@ -138,7 +153,7 @@ static esp_err_t app_event_handler(void *ctx, system_event_t *event)
     
     ESP_LOGI(TAG, "app_event_handler: event: %d", event->event_id);
 
-    // Delegate all WIFI STA events to the wifi_sta module.
+    // Let the wifi_sta module handle all WIFI STA events.
     
     result = wifi_sta_handle_event(ctx, event, &handled);
     if (ESP_OK != result || handled) {

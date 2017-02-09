@@ -4,6 +4,10 @@
 //
 //  In-application programming
 //
+//  This module is responsible for writing the firmware to the flash.
+//  It manages the write buffer, writing to the flash, selecting the
+//  correct partition and activating the partition.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
@@ -20,14 +24,10 @@
 // limitations under the License.
 //
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "esp_system.h"
 #include "esp_ota_ops.h"
-#include "esp_spi_flash.h"
-#include "esp_partition.h"
 #include "esp_log.h"
 
 #include "iap.h"
@@ -39,6 +39,8 @@
 #define IAP_STATE_INITIALIZED   (1 << 0)
 #define IAP_STATE_SESSION_OPEN  (1 << 1)
 
+// While the session is open ('iap_begin' called), this module uses a
+// heap-allocated page buffer to accumulate data for writing.
 #define IAP_PAGE_SIZE 4096
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -95,7 +97,7 @@ iap_err_t iap_begin()
     
     // The module needs to be initialized for this method to work.
     if (!(iap_state.module_state_flags & IAP_STATE_INITIALIZED)) {
-        ESP_LOGE(TAG, "iap_begin: The module hasn't been initialized!");
+        ESP_LOGE(TAG, "iap_begin: the module hasn't been initialized!");
         return IAP_ERR_NOT_INITIALIZED;
     }
     
@@ -109,18 +111,18 @@ iap_err_t iap_begin()
     iap_state.page_buffer_ix = 0;
     iap_state.page_buffer = malloc(IAP_PAGE_SIZE);
     if (!iap_state.page_buffer) {
-        ESP_LOGE(TAG, "iap_begin: Not enough heap memory to allocate the page buffer!");
+        ESP_LOGE(TAG, "iap_begin: not enough heap memory to allocate the page buffer!");
         return IAP_ERR_OUT_OF_MEMORY;
     }
     
     iap_state.partition_to_program = iap_find_next_boot_partition();
     if (!iap_state.partition_to_program) {
-        ESP_LOGE(TAG, "iap_begin: Partition for firmware update not found!");
+        ESP_LOGE(TAG, "iap_begin: partition for firmware update not found!");
         free(iap_state.page_buffer);
         return IAP_ERR_PARTITION_NOT_FOUND;
     }
     
-    ESP_LOGD(TAG, "iap_begin: Next boot partition is '%s'.", iap_state.partition_to_program->label);
+    ESP_LOGD(TAG, "iap_begin: next boot partition is '%s'.", iap_state.partition_to_program->label);
         
     iap_state.cur_flash_address = iap_state.partition_to_program->address;
     
@@ -131,7 +133,7 @@ iap_err_t iap_begin()
         return IAP_FAIL;
     }
     
-    ESP_LOGI(TAG, "iap_begin: Opened session for partition '%s', address 0x%08x.",
+    ESP_LOGI(TAG, "iap_begin: opened IAP session for partition '%s', address 0x%08x.",
              iap_state.partition_to_program->label, iap_state.cur_flash_address);
     
     iap_state.module_state_flags |= IAP_STATE_SESSION_OPEN;
@@ -144,13 +146,13 @@ iap_err_t iap_write(uint8_t *bytes, uint16_t len)
     
     // The module needs to be initialized for this method to work.
     if (!(iap_state.module_state_flags & IAP_STATE_INITIALIZED)) {
-        ESP_LOGE(TAG, "iap_write: The module hasn't been initialized!");
+        ESP_LOGE(TAG, "iap_write: the module hasn't been initialized!");
         return IAP_ERR_NOT_INITIALIZED;
     }
 
     // The session needs to be open for this method to work.
     if (!(iap_state.module_state_flags & IAP_STATE_SESSION_OPEN)) {
-        ESP_LOGE(TAG, "iap_write: Programming session not open!");
+        ESP_LOGE(TAG, "iap_write: programming session not open!");
         return IAP_ERR_NO_SESSION;
     }
     
@@ -180,7 +182,7 @@ iap_err_t iap_write(uint8_t *bytes, uint16_t len)
             esp_err_t result = iap_write_page_buffer();
             
             if (result != ESP_OK) {
-                ESP_LOGE(TAG, "iap_write: Write failed (%d)!", result);
+                ESP_LOGE(TAG, "iap_write: write failed (%d)!", result);
                 return IAP_ERR_WRITE_FAILED;
             }
         }
@@ -195,15 +197,15 @@ iap_err_t iap_commit()
  
     iap_err_t result = iap_write_page_buffer();
     if (result != IAP_OK) {
-        ESP_LOGE(TAG, "iap_commit: Programming session failed in final write.");
+        ESP_LOGE(TAG, "iap_commit: programming session failed in final write.");
     }
     
     result = iap_finish(1);
     if (result != IAP_OK) {
-        ESP_LOGE(TAG, "iap_commit: Programming session failed in iap_finish.");
+        ESP_LOGE(TAG, "iap_commit: programming session failed in iap_finish.");
     }
 
-    ESP_LOGI(TAG, "iap_commit: Programming session successfully completed, partition activated.");
+    ESP_LOGI(TAG, "iap_commit: programming session successfully completed, partition activated.");
     return result;
 }
 
@@ -213,7 +215,7 @@ iap_err_t iap_abort()
     
     iap_err_t result = iap_finish(0);
     if (result == IAP_OK) {
-        ESP_LOGI(TAG, "iap_abort: Programming session successfully aborted.");
+        ESP_LOGI(TAG, "iap_abort: programming session successfully aborted.");
     }
     
     return result;
@@ -226,11 +228,11 @@ static iap_err_t iap_write_page_buffer()
         return IAP_OK;
     }
 
-    ESP_LOGD(TAG, "iap_write_page_buffer: Writing %u bytes to address 0x%08x",
+    ESP_LOGD(TAG, "iap_write_page_buffer: writing %u bytes to address 0x%08x",
              iap_state.page_buffer_ix, iap_state.cur_flash_address);
     esp_err_t result = esp_ota_write(iap_state.ota_handle, iap_state.page_buffer, iap_state.page_buffer_ix);
     if (result != ESP_OK) {
-        ESP_LOGE(TAG, "iap_write_page_buffer: Write failed in esp_ota_write (%d)!", result);
+        ESP_LOGE(TAG, "iap_write_page_buffer: write failed in esp_ota_write (%d)!", result);
         return IAP_ERR_WRITE_FAILED;
     }
     
@@ -246,13 +248,13 @@ static iap_err_t iap_finish(int commit)
 {
     // The module needs to be initialized for this method to work.
     if (!(iap_state.module_state_flags & IAP_STATE_INITIALIZED)) {
-        ESP_LOGE(TAG, "iap_finish: The module hasn't been initialized!");
+        ESP_LOGE(TAG, "iap_finish: the module hasn't been initialized!");
         return IAP_ERR_NOT_INITIALIZED;
     }
     
     // The session needs to be open for this method to work.
     if (!(iap_state.module_state_flags & IAP_STATE_SESSION_OPEN)) {
-        ESP_LOGE(TAG, "iap_finish: Programming session not open!");
+        ESP_LOGE(TAG, "iap_finish: programming session not open!");
         return IAP_ERR_NO_SESSION;
     }
     
@@ -261,12 +263,13 @@ static iap_err_t iap_finish(int commit)
     iap_state.page_buffer_ix = 0;
     iap_state.cur_flash_address = 0;
 
-    // TODO HIGH
+    // TODO
     // There's currently no way to abort an on-going OTA update.
     // http://www.esp32.com/viewtopic.php?f=14&t=1093
     
+    esp_err_t result = esp_ota_end(iap_state.ota_handle);
+
     if (commit) {
-        esp_err_t result = esp_ota_end(iap_state.ota_handle);
         if (result != ESP_OK) {
             ESP_LOGE(TAG, "iap_finish: esp_ota_end failed (%d)!", result);
             return IAP_FAIL;

@@ -4,6 +4,10 @@
 //
 //  In-application programming
 //
+//  This module is responsible for writing the firmware to the flash.
+//  It manages the write buffer, writing to the flash, selecting the
+//  correct partition and activating the partition.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
@@ -46,7 +50,7 @@ iap_err_t iap_begin();
 
 // Call to write a block of data to the current location in flash.
 // If the write fails, you need to abort the current programming session
-// and start again from the beginning.
+// with 'iap_abort' and start again from the beginning.
 iap_err_t iap_write(uint8_t *bytes, uint16_t len);
 
 // Call to close a programming session and activate the programmed partition.

@@ -4,6 +4,9 @@
 //
 //  Updating the firmware over the air.
 //
+//  This module is responsible for establishing and maintaining the
+//  WIFI connection to the defined access point.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //

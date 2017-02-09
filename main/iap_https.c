@@ -4,6 +4,8 @@
 //
 //  Updating the firmware over the air.
 //
+//  This module is responsible to trigger and coordinate firmware updates.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
@@ -20,23 +22,14 @@
 // limitations under the License.
 //
 
-#include <stdio.h>
 #include <string.h>
 
 #include "esp_system.h"
-#include "esp_event.h"
 #include "esp_event_loop.h"
-#include "esp_ota_ops.h"
-#include "esp_spi_flash.h"
-#include "esp_partition.h"
 #include "esp_log.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
 #include "freertos/event_groups.h"
 
-#include "main.h"
 #include "wifi_sta.h"
 #include "wifi_tls.h"
 #include "https_client.h"
@@ -82,7 +75,7 @@ http_continue_receiving_t iap_https_metadata_headers_callback(struct http_reques
 http_continue_receiving_t iap_https_metadata_body_callback(struct http_request_ *request, size_t bytesReceived);
 http_continue_receiving_t iap_https_firmware_headers_callback(struct http_request_ *request, int statusCode, int contentLength);
 http_continue_receiving_t iap_https_firmware_body_callback(struct http_request_ *request, size_t bytesReceived);
-void iap_https_error_callback(struct http_request_ *request, http_error_t error, int additionalInfo);
+void iap_https_error_callback(struct http_request_ *request, http_err_t error, int additionalInfo);
 
 
 int iap_https_init(iap_https_config_t *config)
@@ -253,6 +246,7 @@ static void iap_https_prepare_timer()
     if (check_for_updates_timer) {
         // We have a timer but don't need it. Delete it.
         xTimerDelete(check_for_updates_timer, pdMS_TO_TICKS(5000));
+        check_for_updates_timer = NULL;
     }
 }
 
@@ -267,7 +261,7 @@ static void iap_https_check_for_update()
     }
 
     ESP_LOGI(TAG, "Requesting firmware metadata from server.");
-    http_error_t httpResult = https_send_request(tls_context, &http_metadata_request);
+    http_err_t httpResult = https_send_request(tls_context, &http_metadata_request);
     if (httpResult != HTTP_SUCCESS) {
         ESP_LOGE(TAG, "iap_https_check_for_update: failed to send HTTPS metadata request; https_send_request returned %d", httpResult);
     }
@@ -284,7 +278,7 @@ static void iap_https_download_image()
     has_iap_session = 0;
     
     ESP_LOGI(TAG, "Requesting firmware image '%s' from web server.", fwupdater_config->server_firmware_path);
-    http_error_t httpResult = https_send_request(tls_context, &http_firmware_data_request);
+    http_err_t httpResult = https_send_request(tls_context, &http_firmware_data_request);
     if (httpResult != HTTP_SUCCESS) {
         ESP_LOGE(TAG, "iap_https_download_image: failed to send HTTPS firmware image request; https_send_request returned %d", httpResult);
     }
@@ -327,12 +321,13 @@ http_continue_receiving_t iap_https_metadata_body_callback(struct http_request_ 
 
     // --- Check if the version on the server is the same as the currently installed version ---
     
-    if (version == SOFTWARE_VERSION) {
+    if (version == fwupdater_config->current_software_version) {
         ESP_LOGD(TAG, "iap_https_metadata_body_callback: we're up-to-date!");
         return HTTP_STOP_RECEIVING;
     }
     
-    ESP_LOGD(TAG, "iap_https_metadata_body_callback: our version is %d, the version on the server is %d", SOFTWARE_VERSION, version);
+    ESP_LOGD(TAG, "iap_https_metadata_body_callback: our version is %d, the version on the server is %d",
+             fwupdater_config->current_software_version, version);
 
     // --- Request the firmware image ---
 
@@ -413,7 +408,7 @@ http_continue_receiving_t iap_https_firmware_headers_callback(struct http_reques
     return HTTP_CONTINUE_RECEIVING;
 }
 
-void iap_https_error_callback(struct http_request_ *request, http_error_t error, int additionalInfo)
+void iap_https_error_callback(struct http_request_ *request, http_err_t error, int additionalInfo)
 {
     ESP_LOGE(TAG, "iap_https_error_callback: error=%d additionalInfo=%d", error, additionalInfo);
     

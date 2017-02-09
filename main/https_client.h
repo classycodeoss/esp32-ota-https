@@ -7,7 +7,7 @@
 //  This module provides functions to execute HTTPS requests on an
 //  existing TLS TCP connection.
 //
-//  Created by Andreas Schweizer on 19.01.2017.
+//  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,11 +26,26 @@
 #ifndef __HTTP_UTIL__
 #define __HTTP_UTIL__ 1
 
+
 // This module depends on the wifi_tls module.
 // Forward declaration of the wifi_tls context structure.
 struct wifi_tls_context_;
 
+
+typedef int32_t http_err_t;
+
+#define HTTP_SUCCESS 0
+#define HTTP_ERR_INVALID_ARGS           0x101
+#define HTTP_ERR_OUT_OF_MEMORY          0x102
+#define HTTP_ERR_NOT_IMPLEMENTED        0x103
+#define HTTP_ERR_BUFFER_TOO_SMALL       0x104
+#define HTTP_ERR_SEND_FAILED            0x105
+#define HTTP_ERR_INVALID_STATUS_LINE    0x106
+#define HTTP_ERR_VERSION_NOT_SUPPORTED  0x107
+#define HTTP_ERR_NON_200_STATUS_CODE    0x108 // additional info = status code
+
 // HTTP methods to use in the requests.
+// TODO Right now, this is only a partial implementation.
 typedef enum {
     HTTP_GET = 0,
     // HTTP_POST, ...
@@ -58,24 +73,12 @@ typedef enum {
     HTTP_STOP_RECEIVING
 } http_continue_receiving_t;
 
-// Result values.
-typedef enum {
-    HTTP_SUCCESS = 0,
-    HTTP_ERR_INVALID_ARGS, 
-    HTTP_ERR_OUT_OF_MEMORY,
-    HTTP_ERR_NOT_IMPLEMENTED,
-    HTTP_ERR_BUFFER_TOO_SMALL,
-    HTTP_ERR_SEND_FAILED,
-    HTTP_ERR_INVALID_STATUS_LINE,
-    HTTP_ERR_VERSION_NOT_SUPPORTED,
-    HTTP_ERR_NON_200_STATUS_CODE,   // additional info = status code
-} http_error_t;
 
 struct http_request_;
 
 typedef http_continue_receiving_t (*http_request_headers_callback_t)(struct http_request_ *request, int statusCode, int contentLength);
 typedef http_continue_receiving_t (*http_request_body_callback_t)(struct http_request_ *request, size_t bytesReceived);
-typedef void (*http_request_error_callback_t)(struct http_request_ *request, http_error_t error, int additionalInfo);
+typedef void (*http_request_error_callback_t)(struct http_request_ *request, http_err_t error, int additionalInfo);
 
 typedef struct http_request_ {
     
@@ -119,7 +122,7 @@ typedef struct http_request_ {
 
 // Send the specified HTTP request on the (connected and verified) tlsContext.
 // The httpRequest object needs to be kept in memory until the request has been completed.
-http_error_t https_send_request(struct wifi_tls_context_ *tlsContext, http_request_t *httpRequest);
+http_err_t https_send_request(struct wifi_tls_context_ *tlsContext, http_request_t *httpRequest);
 
 
 // Search the buffer for the specified key and try to parse an integer value right after the key.

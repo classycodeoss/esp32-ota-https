@@ -4,6 +4,9 @@
 //
 //  Updating the firmware over the air.
 //
+//  This module provides TLS connections with certificate pinning and
+//  callback-based request/response functionality.
+//
 //  Created by Andreas Schweizer on 11.01.2017.
 //  Copyright © 2017 Classy Code GmbH
 //
@@ -24,12 +27,12 @@
 #define __WIFI_TLS__ 1
 
 
-// Forward declaration for the opaque context object.
+// Forward declaration of the opaque context object.
 struct wifi_tls_context_;
 
 typedef struct wifi_tls_init_struct_ {
     
-    // Name of the host that provides the firmware images, e.g. www.classycode.io.
+    // Name of the host that provides the firmware images, e.g. "www.classycode.io".
     const char *server_host_name;
     
     // Port for the connection, e.g. "443".
@@ -39,7 +42,7 @@ typedef struct wifi_tls_init_struct_ {
     // Needs to be in PEM format (base64-encoded DER data with begin and end marker).
     const char *server_root_ca_public_key_pem;
 
-    // Public key of the server's certificate.
+    // Public key of the server's peer certificate for certificate pinning.
     // Needs to be in PEM format (base64-encoded DER data with begin and end marker).
     const char *peer_public_key_pem;
     
@@ -48,7 +51,7 @@ typedef struct wifi_tls_init_struct_ {
 typedef struct wifi_tls_request_ {
     
     // Request buffer.
-    // Example: GET https://www.classycode.io/esp32/ota.txt HTTP/1.1\nHost: www.classycode.io\n\n
+    // Example: "GET https://www.classycode.io/esp32/ota.txt HTTP/1.1\nHost: www.classycode.io\n\n"
     // Not necessarily zero-terminated.
     char *request_buffer;
     

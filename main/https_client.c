@@ -67,13 +67,13 @@ static uint32_t request_nr;
 
 static int https_tls_callback(struct wifi_tls_context_ *context, struct wifi_tls_request_ *request, int index, size_t len);
 
-static http_error_t https_validate_request(http_request_t *httpRequest);
-static http_error_t https_create_context_for_request(http_request_context_t **httpContext, http_request_t *httpRequest);
+static http_err_t https_validate_request(http_request_t *httpRequest);
+static http_err_t https_create_context_for_request(http_request_context_t **httpContext, http_request_t *httpRequest);
 static void https_destroy_context(http_request_context_t *httpContext);
 
 
 // Send the specified HTTP request on the (connected and verified) tlsContext.
-http_error_t https_send_request(struct wifi_tls_context_ *tlsContext, http_request_t *httpRequest)
+http_err_t https_send_request(struct wifi_tls_context_ *tlsContext, http_request_t *httpRequest)
 {
     // Validate the input.
     
@@ -82,7 +82,7 @@ http_error_t https_send_request(struct wifi_tls_context_ *tlsContext, http_reque
         return HTTP_ERR_INVALID_ARGS;
     }
     
-    http_error_t result = https_validate_request(httpRequest);
+    http_err_t result = https_validate_request(httpRequest);
     if (result != HTTP_SUCCESS) {
         return result;
     }
@@ -321,7 +321,7 @@ int http_parse_key_value_string(const char *buffer, const char *key, char *str, 
     return 0;
 }
 
-static http_error_t https_validate_request(http_request_t *httpRequest)
+static http_err_t https_validate_request(http_request_t *httpRequest)
 {
     if (!httpRequest) {
         ESP_LOGE(TAG, "https_validate_request: httpRequest missing");
@@ -363,7 +363,7 @@ static http_error_t https_validate_request(http_request_t *httpRequest)
     return HTTP_SUCCESS;
 }
 
-static http_error_t https_create_context_for_request(http_request_context_t **httpContext, http_request_t *httpRequest)
+static http_err_t https_create_context_for_request(http_request_context_t **httpContext, http_request_t *httpRequest)
 {
     // Create the HTTP context object.
     
