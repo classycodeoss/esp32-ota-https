@@ -154,7 +154,7 @@ void wifi_tls_free_context(wifi_tls_context_t *ctx)
     free(ctx->peer_public_key_pem);
     free(ctx->server_root_ca_public_key_pem);
     free(ctx->server_host_name);
-    memset(ctx, 0, sizeof(wifi_tls_free_context));
+    memset(ctx, 0, sizeof(wifi_tls_context_t));
     
     free(ctx);
 }
