@@ -383,6 +383,7 @@ static int wifi_tls_reset_context(wifi_tls_context_t *ctx)
     mbedtls_ssl_config_free(&ctx->ssl_conf);
     mbedtls_ctr_drbg_free(&ctx->ctr_drbg);
     mbedtls_x509_crt_free(&ctx->root_ca_cert);
+    mbedtls_x509_crt_free(&ctx->peer_cert);
     mbedtls_ssl_free(&ctx->ssl);
     
     ESP_LOGD(TAG, "wifi_tls_reset_context: context reset for server: %s", ctx->server_host_name);
