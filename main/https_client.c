@@ -61,7 +61,7 @@ typedef struct http_request_context_ {
 } http_request_context_t;
 
 
-static const char *http_get_request_format_string = "GET %s HTTP/1.1\nHost: %s\n\n";
+static const char *http_get_request_format_string = "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n";
 static uint32_t request_nr;
 
 
