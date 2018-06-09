@@ -386,12 +386,13 @@ static http_err_t https_create_context_for_request(http_request_context_t **http
     ctx->request = httpRequest;
     
     // Create the TLS request string.
-    
-    size_t requestLen = strlen(http_get_request_format_string) + strlen(httpRequest->host) + strlen(httpRequest->path) - 4 + 1;
-    
+
+    size_t requestLen = strlen(http_get_request_format_string) - 4 // strlen("%s%s") = 4
+        + strlen(httpRequest->host) + strlen(httpRequest->path);
+
     ctx->tls_request_buffer_size = requestLen;
-    ctx->tls_request_buffer = malloc(requestLen);
-    
+    ctx->tls_request_buffer = malloc(ctx->tls_request_buffer_size * sizeof(char));
+
     if (!ctx->tls_request_buffer) {
         ESP_LOGE(TAG, "https_create_context_for_request: failed to allocate TLS request buffer");
         https_destroy_context(ctx);
