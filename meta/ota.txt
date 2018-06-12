@@ -1,0 +1,3 @@
+FILE=/esp32/esp32-ota-https.bin
+VERSION=1
+INTERVAL=10
