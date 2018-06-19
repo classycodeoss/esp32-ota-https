@@ -178,5 +178,5 @@ static void wifi_sta_set_connected(bool c)
         xEventGroupClearBits(wifi_sta_event_group, WIFI_STA_EVENT_GROUP_CONNECTED_FLAG);
     }
     
-    ESP_LOGI(TAG, "Device is now %s WIFI network", c ? "connected to" : "disconnected from")
+    ESP_LOGI(TAG, "Device is now %s WIFI network", c ? "connected to" : "disconnected from");
 }
