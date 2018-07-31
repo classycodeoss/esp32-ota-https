@@ -387,7 +387,7 @@ static http_err_t https_create_context_for_request(http_request_context_t **http
     
     // Create the TLS request string.
 
-    size_t requestLen = strlen(http_get_request_format_string) - 4 // strlen("%s%s") = 4
+    size_t requestLen = strlen(http_get_request_format_string) // strlen("%s%s") = 4
         + strlen(httpRequest->host) + strlen(httpRequest->path);
 
     ctx->tls_request_buffer_size = requestLen;
@@ -429,4 +429,3 @@ static void https_destroy_context(http_request_context_t *httpContext)
     free(httpContext->tls_response_buffer);
     free(httpContext);
 }
-
